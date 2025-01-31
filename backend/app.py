@@ -3,8 +3,11 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 import time
+from flask_cors import CORS 
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
 app.secret_key = "my-secret-key-it-is"
 app.config["SESSION_COOKIE_NAME"] = "Spotify Cookie"
 
@@ -32,7 +35,7 @@ def get_spotify_client():
 @app.route("/")
 def login():
     auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
+    return jsonify({"auth_url": auth_url})
 
 @app.route("/callback")
 def callback():
@@ -40,7 +43,7 @@ def callback():
     code = request.args.get("code")
     token_info = sp_oauth.get_access_token(code)
     session["token_info"] = token_info
-    return "Login Successful! You can now fetch user data."
+    return redirect("http://localhost:3000/dashboard")
 
 @app.route("/dashboard")
 def dashboard():
