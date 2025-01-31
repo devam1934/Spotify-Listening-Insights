@@ -47,24 +47,62 @@ def dashboard():
     sp = get_spotify_client()
     if not sp:
         return redirect("/")
-    
+
     # Fetch User's Top Artists
     top_artists = sp.current_user_top_artists(limit=10, time_range="medium_term")
-    artists_data = [{"name": artist["name"], "genres": artist["genres"], "popularity": artist["popularity"]} for artist in top_artists["items"]]
+    artists_data = []
+    genre_count = {}
+    for artist in top_artists["items"]:
+        artists_data.append({
+            "name": artist["name"],
+            "genres": artist["genres"],
+            "popularity": artist["popularity"]
+        })
+        for genre in artist["genres"]:
+            genre_count[genre] = genre_count.get(genre, 0) + 1
 
     # Fetch User's Top Tracks
     top_tracks = sp.current_user_top_tracks(limit=10, time_range="medium_term")
-    tracks_data = [{"name": track["name"], "artist": track["artists"][0]["name"], "popularity": track["popularity"], "duration_ms": track["duration_ms"]} for track in top_tracks["items"]]
+    tracks_data = []
+    total_duration = 0
+    for track in top_tracks["items"]:
+        tracks_data.append({
+            "name": track["name"],
+            "artist": track["artists"][0]["name"],
+            "popularity": track["popularity"],
+            "duration_ms": track["duration_ms"]
+        })
+        total_duration += track["duration_ms"]
+
+    avg_song_duration = total_duration / len(top_tracks["items"]) if top_tracks["items"] else 0
 
     # Fetch Recently Played Songs
-    recent_tracks = sp.current_user_recently_played(limit=10)
-    recent_data = [{"track": item["track"]["name"], "artist": item["track"]["artists"][0]["name"], "played_at": item["played_at"]} for item in recent_tracks["items"]]
+    recent_tracks = sp.current_user_recently_played(limit=20)
+    recent_data = []
+    time_analysis = {}
+    for item in recent_tracks["items"]:
+        played_time = item["played_at"]
+        hour = pd.to_datetime(played_time).hour
+        time_analysis[hour] = time_analysis.get(hour, 0) + 1
+
+        recent_data.append({
+            "track": item["track"]["name"],
+            "artist": item["track"]["artists"][0]["name"],
+            "played_at": played_time
+        })
+
+    # Identify peak listening time
+    peak_listening_hour = max(time_analysis, key=time_analysis.get) if time_analysis else None
 
     return jsonify({
         "top_artists": artists_data,
+        "top_genres": sorted(genre_count.items(), key=lambda x: x[1], reverse=True),
         "top_tracks": tracks_data,
-        "recent_tracks": recent_data
+        "avg_song_duration_sec": avg_song_duration / 1000,
+        "recent_tracks": recent_data,
+        "peak_listening_hour": peak_listening_hour
     })
+
 
 if __name__ == "__main__":
     app.run(port=8888, debug=True)
