@@ -4,11 +4,15 @@ import { Bar, Pie } from "react-chartjs-2";
 import "chart.js/auto";
 import moment from "moment";
 import "./App.css";
+import { useSearchParams } from "react-router-dom";
 
 function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchParams] = useSearchParams();
+  const userId = searchParams.get("user_id");
+  
 
   // Function to handle login redirect
   const handleLogin = () => {
@@ -24,7 +28,7 @@ function App() {
 
   useEffect(() => {
     setLoading(true);
-    axios.get("http://localhost:8888/dashboard", { withCredentials: true })
+    axios.get(`http://localhost:8888/dashboard?user_id=${userId}`, { withCredentials: true })
       .then((response) => {
         console.log(response.data);
         setData(response.data);
@@ -34,7 +38,16 @@ function App() {
         setError("Failed to fetch Spotify data.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [userId]);
+
+  if (!userId) {
+    return (
+      <div className="container">
+        <h1 className="title">Spotify Listening Insights</h1>
+        <button className="login-button" onClick={handleLogin}>Login with Spotify</button>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div>Loading...</div>;
@@ -73,6 +86,7 @@ function App() {
       },
     ],
   };
+
 
   return (
     <div className="container">
@@ -116,3 +130,6 @@ function App() {
 }
 
 export default App;
+
+
+
